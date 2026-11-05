@@ -392,7 +392,7 @@
     // 透過 URL 參數 ?manage 進入後台，頁面上無任何入口痕跡
     (function() {
       const params = new URLSearchParams(window.location.search);
-      if (params.has('manage')) {
+      if (params.has('sgu')) {
         document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
         document.getElementById('view-admin').classList.add('active');
