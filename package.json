@@ -1,0 +1,14 @@
+{
+  "name": "chemical-registration",
+  "version": "1.0.0",
+  "description": "產品／化學品申請及登記系統",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  },
+  "private": true
+}
