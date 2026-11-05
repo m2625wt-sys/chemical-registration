@@ -1,3 +1,4 @@
+
 /**
  * 產品／化學品申請系統 - 後端伺服器
  * 純 Node.js，無需安裝任何套件
@@ -179,8 +180,8 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 400, { ok: false, error: '請至少提交一項物品' });
       }
       for (const it of body.items) {
-        if (!it.category || !it.name || !it.ingredients) {
-          return sendJSON(res, 400, { ok: false, error: '每項物品需包含類別、名稱、成份／用途' });
+        if (!it.category || !it.name || !it.quantity || !it.size || !it.ingredients) {
+          return sendJSON(res, 400, { ok: false, error: '每項物品需包含類別、名稱、數量、尺寸／容量規格、成份／用途' });
         }
       }
       const appNo = generateAppNo();
@@ -189,6 +190,8 @@ const server = http.createServer(async (req, res) => {
         items: body.items.map((it) => ({
           category: String(it.category).trim(),
           name: String(it.name).trim(),
+          quantity: String(it.quantity).trim(),
+          size: String(it.size).trim(),
           ingredients: String(it.ingredients).trim(),
         })),
         remarks: body.remarks ? String(body.remarks).trim() : '',
@@ -224,7 +227,7 @@ const server = http.createServer(async (req, res) => {
         return sendJSON(res, 401, { ok: false, error: '未授權' });
       }
       const list = readApps();
-      const header = ['申請編號', '送出時間', '物品序', '物品類別', '申請物品名稱', '成份／用途', '備註'];
+      const header = ['申請編號', '送出時間', '物品序', '物品類別', '申請物品名稱', '數量', '尺寸／容量規格', '成份／用途', '備註'];
       const rows = [header.join(',')];
       list.forEach((app) => {
         const time = app.submittedAt
@@ -239,6 +242,8 @@ const server = http.createServer(async (req, res) => {
               idx + 1,
               csvEscape(it.category || ''),
               csvEscape(it.name || ''),
+              csvEscape(it.quantity || ''),
+              csvEscape(it.size || ''),
               csvEscape(it.ingredients || ''),
               remarks,
             ].join(',')
