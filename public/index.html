@@ -167,7 +167,6 @@
     <h1>產品／化學品申請</h1>
     <div class="tabs">
       <button type="button" class="tab-btn active" data-view="form">申請表單</button>
-      <button type="button" class="tab-btn" data-view="admin">後台管理</button>
     </div>
   </header>
 
@@ -205,7 +204,10 @@
       <div id="adminContent" style="display:none;">
         <div class="card">
           <h2>申請清單</h2>
-          <div class="stats">共 <strong id="totalApps">0</strong> 筆申請</div>
+          <div class="stats" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>共 <strong id="totalApps">0</strong> 筆申請</span>
+            <button type="button" id="backToFormBtn" style="font-size:0.82rem;padding:0.35rem 0.7rem;background:#e8eef0;border:none;border-radius:6px;cursor:pointer;color:var(--text);font-family:inherit;">← 返回申請表單</button>
+          </div>
           <div class="admin-toolbar">
             <button type="button" class="btn-primary" id="exportExcelBtn">匯出 Excel</button>
             <button type="button" class="btn-secondary" id="refreshBtn">重新整理</button>
@@ -233,8 +235,8 @@
 
   <script>
     const CATEGORIES = [
-      '化學原料', '清潔／消毒劑', '化妝品／個人護理',
-      '食品添加劑', '工業用化學品', '其他'
+      '化學廢料', '動物屍體', '塗料(油漆、地坪漆、環氧樹脂等)',
+      '廢機油', '工業樹脂', '氣瓶', '其他'
     ];
     let itemCount = 0;
     let adminUnlocked = false;
@@ -288,7 +290,7 @@
       div.innerHTML =
         '<div class="item-num">物品 #' + id + '</div>' +
         (id > 1 ? '<button type="button" class="remove-btn" aria-label="移除">✕</button>' : '') +
-        '<div class="form-group"><label>物品類別 <span class="req">*</span></label>' +
+        '<div class="form-group"><label>申請類(申報名稱) <span class="req">*</span></label>' +
         '<select class="cat-select" required><option value="">請選擇</option>' +
         CATEGORIES.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') +
         '</select></div>' +
@@ -358,13 +360,46 @@
         btn.classList.add('active');
         document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
         document.getElementById('view-' + btn.dataset.view).classList.add('active');
-        if (btn.dataset.view === 'admin' && adminUnlocked) renderAdminList();
       });
+    });
+
+    let titleClickTimer = null;
+    let titleClickCount = 0;
+    const headerTitle = document.querySelector('header h1');
+    headerTitle.style.cursor = 'default';
+    headerTitle.addEventListener('click', function() {
+      titleClickCount++;
+      if (titleClickCount === 1) {
+        titleClickTimer = setTimeout(function() {
+          titleClickCount = 0;
+        }, 600);
+      } else if (titleClickCount >= 3) {
+        clearTimeout(titleClickTimer);
+        titleClickCount = 0;
+        document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+        document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+        document.getElementById('view-admin').classList.add('active');
+        if (adminUnlocked) {
+          document.getElementById('pinGate').style.display = 'none';
+          document.getElementById('adminContent').style.display = 'block';
+          renderAdminList();
+        } else {
+          document.getElementById('pinGate').style.display = 'block';
+          document.getElementById('adminContent').style.display = 'none';
+        }
+      }
     });
 
     document.getElementById('pinBtn').addEventListener('click', tryPin);
     document.getElementById('pinInput').addEventListener('keyup', function(e) {
       if (e.key === 'Enter') tryPin();
+    });
+
+    document.getElementById('backToFormBtn').addEventListener('click', function() {
+      document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+      document.getElementById('view-form').classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelector('.tab-btn[data-view="form"]').classList.add('active');
     });
 
     async function tryPin() {
