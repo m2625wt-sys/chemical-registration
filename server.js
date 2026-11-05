@@ -45,12 +45,23 @@ function writeApps(list) {
 }
 
 function generateAppNo() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let s = 'A';
-  for (let i = 0; i < 8; i++) {
-    s += chars[Math.floor(Math.random() * chars.length)];
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const dateStr = `${y}${m}${d}`;
+  
+  // 读取现有申请，计算当天序号
+  const list = readApps();
+  let todayCount = 0;
+  for (const app of list) {
+    if (app.appNo && app.appNo.startsWith(dateStr)) {
+      todayCount++;
+    }
   }
-  return s;
+  
+  const seq = String(todayCount + 1).padStart(3, '0');
+  return dateStr + seq;
 }
 
 // ---------- MIME ----------
