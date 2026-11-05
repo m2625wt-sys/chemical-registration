@@ -15,7 +15,7 @@ const path = require('path');
 const { URL } = require('url');
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_PIN = process.env.ADMIN_PIN || '1234';
+const ADMIN_PIN = process.env.ADMIN_PIN || '111234';
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'applications.json');
 const PUBLIC_DIR = path.join(__dirname, 'public');
