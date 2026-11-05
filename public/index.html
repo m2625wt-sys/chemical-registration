@@ -198,7 +198,6 @@
           <p style="font-size:0.9rem;color:var(--muted);">內部人員請輸入管理密碼</p>
           <input type="password" id="pinInput" maxlength="8" placeholder="••••" inputmode="numeric" />
           <button type="button" class="btn-primary" id="pinBtn" style="max-width:160px;margin:0.5rem auto 0;">進入</button>
-          <p style="font-size:0.72rem;color:var(--muted);margin-top:0.8rem;">預設密碼：1234</p>
         </div>
       </div>
       <div id="adminContent" style="display:none;">
@@ -241,7 +240,28 @@
     let itemCount = 0;
     let adminUnlocked = false;
     let adminPin = '';
+    let adminIdleTimer = null;
+    const ADMIN_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 分鐘閒置自動退出
     const API = '';
+
+    function resetAdminIdle() {
+      if (adminIdleTimer) clearTimeout(adminIdleTimer);
+      if (adminUnlocked) {
+        adminIdleTimer = setTimeout(lockAdmin, ADMIN_IDLE_TIMEOUT);
+      }
+    }
+
+    function lockAdmin() {
+      adminUnlocked = false;
+      adminPin = '';
+      if (adminIdleTimer) clearTimeout(adminIdleTimer);
+      adminIdleTimer = null;
+      document.getElementById('view-admin').classList.remove('active');
+      document.getElementById('view-form').classList.add('active');
+      document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+      document.querySelector('.tab-btn[data-view="form"]').classList.add('active');
+      document.getElementById('pinInput').value = '';
+    }
 
     async function api(path, options) {
       options = options || {};
@@ -296,6 +316,10 @@
         '</select></div>' +
         '<div class="form-group"><label>申請物品名稱 <span class="req">*</span></label>' +
         '<input type="text" class="item-name" required placeholder="產品或化學品名稱" /></div>' +
+        '<div class="form-group"><label>數量 <span class="req">*</span></label>' +
+        '<input type="text" class="item-qty" required placeholder="如：2瓶、1罐、5桶" /></div>' +
+        '<div class="form-group"><label>尺寸／容量規格 <span class="req">*</span></label>' +
+        '<input type="text" class="item-size" required placeholder="如：500ml、1L、30*30*30cm" /></div>' +
         '<div class="form-group"><label>成份／用途 <span class="req">*</span></label>' +
         '<textarea class="item-ing" required placeholder="成份組成或主要用途（可換行）"></textarea></div>';
       document.getElementById('itemsContainer').appendChild(div);
@@ -310,9 +334,11 @@
         const b = blocks[i];
         const cat = b.querySelector('.cat-select').value.trim();
         const name = b.querySelector('.item-name').value.trim();
+        const qty = b.querySelector('.item-qty').value.trim();
+        const size = b.querySelector('.item-size').value.trim();
         const ing = b.querySelector('.item-ing').value.trim();
-        if (!cat || !name || !ing) return null;
-        items.push({ category: cat, name: name, ingredients: ing });
+        if (!cat || !name || !qty || !size || !ing) return null;
+        items.push({ category: cat, name: name, quantity: qty, size: size, ingredients: ing });
       }
       return items;
     }
@@ -320,7 +346,7 @@
     document.getElementById('submitBtn').addEventListener('click', async function() {
       const items = collectItems();
       if (!items || items.length === 0) {
-        alert('請至少填寫一項完整物品資料（類別、名稱、成份／用途）。');
+        alert('請至少填寫一項完整物品資料（類別、名稱、數量、尺寸／容量規格、成份／用途）。');
         return;
       }
       const btn = document.getElementById('submitBtn');
@@ -363,32 +389,17 @@
       });
     });
 
-    let titleClickTimer = null;
-    let titleClickCount = 0;
-    const headerTitle = document.querySelector('header h1');
-    headerTitle.style.cursor = 'default';
-    headerTitle.addEventListener('click', function() {
-      titleClickCount++;
-      if (titleClickCount === 1) {
-        titleClickTimer = setTimeout(function() {
-          titleClickCount = 0;
-        }, 600);
-      } else if (titleClickCount >= 3) {
-        clearTimeout(titleClickTimer);
-        titleClickCount = 0;
+    // 透過 URL 參數 ?manage 進入後台，頁面上無任何入口痕跡
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('manage')) {
         document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
         document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
         document.getElementById('view-admin').classList.add('active');
-        if (adminUnlocked) {
-          document.getElementById('pinGate').style.display = 'none';
-          document.getElementById('adminContent').style.display = 'block';
-          renderAdminList();
-        } else {
-          document.getElementById('pinGate').style.display = 'block';
-          document.getElementById('adminContent').style.display = 'none';
-        }
+        document.getElementById('pinGate').style.display = 'block';
+        document.getElementById('adminContent').style.display = 'none';
       }
-    });
+    })();
 
     document.getElementById('pinBtn').addEventListener('click', tryPin);
     document.getElementById('pinInput').addEventListener('keyup', function(e) {
@@ -402,6 +413,10 @@
       document.querySelector('.tab-btn[data-view="form"]').classList.add('active');
     });
 
+    ['mousemove','keydown','click','scroll','touchstart'].forEach(function(evt) {
+      document.addEventListener(evt, resetAdminIdle);
+    });
+
     async function tryPin() {
       const val = document.getElementById('pinInput').value.trim();
       if (!val) return alert('請輸入密碼');
@@ -411,6 +426,7 @@
         adminUnlocked = true;
         document.getElementById('pinGate').style.display = 'none';
         document.getElementById('adminContent').style.display = 'block';
+        resetAdminIdle();
         renderAdminList();
       } catch (e) {
         adminPin = '';
@@ -436,7 +452,9 @@
           const itemsHtml = (app.items || []).map(function(it) {
             return '<div class="app-item"><div class="cat">' + escapeHtml(it.category || '') +
               '</div><div><strong>' + escapeHtml(it.name || '') +
-              '</strong></div><div style="white-space:pre-wrap;margin-top:0.2rem;">' +
+              '</strong></div><div style="margin-top:0.2rem;font-size:0.8rem;">' +
+              '數量：' + escapeHtml(it.quantity || '') + ' ｜ 規格：' + escapeHtml(it.size || '') +
+              '</div><div style="white-space:pre-wrap;margin-top:0.2rem;">' +
               escapeHtml(it.ingredients || '') + '</div></div>';
           }).join('');
           return '<div class="app-card"><div class="app-head"><span class="app-no">' +
@@ -482,6 +500,8 @@
               '物品序': idx + 1,
               '物品類別': it.category || '',
               '申請物品名稱': it.name || '',
+              '數量': it.quantity || '',
+              '尺寸／容量規格': it.size || '',
               '成份／用途': it.ingredients || '',
               '備註': remarks
             });
@@ -502,7 +522,7 @@
         const ws = XLSX.utils.json_to_sheet(rows);
         ws['!cols'] = [
           { wch: 12 }, { wch: 18 }, { wch: 8 },
-          { wch: 16 }, { wch: 24 }, { wch: 40 }, { wch: 20 }
+          { wch: 16 }, { wch: 24 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }
         ];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, '申請清單');
