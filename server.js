@@ -6,7 +6,7 @@
  *   node server.js
  *
  * 預設埠號：3000
- * 管理密碼：1234（可在下方 ADMIN_PIN 修改）
+ * 管理密碼：111234（可在下方 ADMIN_PIN 修改）
  */
 
 const http = require('http');
